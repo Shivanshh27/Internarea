@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import axios from "axios";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function SvgSlider() {
   const categories = [
@@ -106,7 +107,11 @@ export default function SvgSlider() {
       bgColor: "bg-teal-600",
     },
   ];
+  const Home = () => {
+    const { t } = useLanguage();
 
+    return <h1>{t("internships")}</h1>;
+  };
   const stats = [
     { number: "300K+", label: "companies hiring" },
     { number: "10K+", label: "new openings everyday" },
@@ -119,7 +124,9 @@ export default function SvgSlider() {
     const fetchdata = async () => {
       try {
         const [internshipres, jobres] = await Promise.all([
-          axios.get("https://internshala-clone-y2p2.onrender.com/api/internship"),
+          axios.get(
+            "https://internshala-clone-y2p2.onrender.com/api/internship"
+          ),
           axios.get("https://internshala-clone-y2p2.onrender.com/api/job"),
         ]);
         setinternship(internshipres.data);

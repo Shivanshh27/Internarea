@@ -10,6 +10,7 @@ import { login, logout } from "@/Feature/Userslice";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Script from "next/script";
+import { LanguageProvider } from "@/context/LanguageContext";
 
 export default function App({ Component, pageProps }: AppProps) {
   function AuthListener() {
@@ -38,20 +39,13 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <Provider store={store}>
-      {/* ✅ Razorpay script MUST be here */}
-      <Script
-        src="https://checkout.razorpay.com/v1/checkout.js"
-        strategy="beforeInteractive"
-      />
-
-      <AuthListener />
-
-      <div className="bg-white">
+      <LanguageProvider>
+        <AuthListener />
         <ToastContainer />
         <Navbar />
         <Component {...pageProps} />
         <Footer />
-      </div>
+      </LanguageProvider>
     </Provider>
   );
 }

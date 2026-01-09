@@ -100,73 +100,76 @@ const index = () => {
       </div>
     );
   }
-  const handlesubmitapplication = async () => {
-    if (!user) {
-      toast.error("Please login first");
-      return;
-    }
+ const handlesubmitapplication = async () => {
+   if (!user) {
+     toast.error("Please login first");
+     return;
+   }
 
-    if (!coverLetter.trim()) {
-      toast.error("Please write a cover letter");
-      return;
-    }
+   if (!coverLetter.trim()) {
+     toast.error("Please write a cover letter");
+     return;
+   }
 
-    if (!availability) {
-      toast.error("Please select your availability");
-      return;
-    }
+   if (!availability) {
+     toast.error("Please select your availability");
+     return;
+   }
 
-    try {
-      // 🔹 1. Fetch user subscription data
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
+   try {
+     // 🔹 1. Fetch user subscription data
+     const userRef = doc(db, "users", user.uid);
+     const userSnap = await getDoc(userRef);
 
-      if (!userSnap.exists()) {
-        toast.error("User profile not found");
-        return;
-      }
+     if (!userSnap.exists()) {
+       toast.error("User profile not found");
+       return;
+     }
 
-      const {
-        applyLimit = 1,
-        appliedCount = 0,
-        plan = "free",
-      } = userSnap.data();
+     const {
+       plan = "free",
+       monthlyApplyLimit = 1,
+       appliedThisMonth = 0,
+     } = userSnap.data();
 
-      // 🔹 2. Check apply limit
-      if (applyLimit !== Infinity && appliedCount >= applyLimit) {
-        toast.error(
-          `Apply limit reached for ${plan.toUpperCase()} plan. Please upgrade.`
-        );
-        return;
-      }
+     // 🔹 2. Enforce apply limit (Gold = unlimited)
+     if (plan !== "gold" && appliedThisMonth >= monthlyApplyLimit) {
+       toast.error(
+         `Application limit reached for ${plan.toUpperCase()} plan. Please upgrade.`
+       );
+       return;
+     }
 
-      // 🔹 3. Submit application
-      const applicationdata = {
-        category: internshipData.category,
-        company: internshipData.company,
-        coverLetter,
-        user,
-        Application: id,
-        availability,
-      };
+     // 🔹 3. Submit application
+     const applicationdata = {
+       category: internshipData.category,
+       company: internshipData.company,
+       coverLetter,
+       user,
+       Application: id,
+       availability,
+     };
 
-      await axios.post(
-        "https://internshala-clone-y2p2.onrender.com/api/application",
-        applicationdata
-      );
+     await axios.post(
+       "https://internshala-clone-y2p2.onrender.com/api/application",
+       applicationdata
+     );
 
-      // 🔹 4. Increment appliedCount AFTER success
-      await updateDoc(userRef, {
-        appliedCount: increment(1),
-      });
+     // 🔹 4. Increment applied count AFTER success
+     if (plan !== "gold") {
+       await updateDoc(userRef, {
+         appliedThisMonth: appliedThisMonth + 1,
+       });
+     }
 
-      toast.success("Application submitted successfully");
-      router.push("/internship");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to submit application");
-    }
-  };
+     toast.success("Application submitted successfully");
+     router.push("/internship");
+   } catch (error) {
+     console.error(error);
+     toast.error("Failed to submit application");
+   }
+ };
+
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
