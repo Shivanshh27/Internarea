@@ -14,62 +14,65 @@ import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
-// export const internships = [
-//   {
-//     _id: "1",
-//     title: "Frontend Developer Intern",
-//     company: "Tech Innovators",
-//     location: "Remote",
-//     stipend: "$500/month",
-//     Duration: "3 Months",
-//     StartDate: "March 15, 2025",
-//     aboutCompany:
-//       "Tech Innovators is a leading software development company specializing in modern web applications.",
-//     aboutJob:
-//       "As a Frontend Developer Intern, you will work on real-world projects using React.js and Tailwind CSS.",
-//     Whocanapply:
-//       "Students and fresh graduates with knowledge of HTML, CSS, JavaScript, and React.js.",
-//     perks: "Certificate, Letter of Recommendation, Flexible Work Hours",
-//     AdditionalInfo: "This is a remote internship with flexible working hours.",
-//     numberOfopning: "2",
-//   },
-//   {
-//     _id: "2",
-//     title: "Backend Developer Intern",
-//     company: "Cloud Systems",
-//     location: "San Francisco",
-//     stipend: "$800/month",
-//     Duration: "4 Months",
-//     StartDate: "April 1, 2025",
-//     aboutCompany:
-//       "Cloud Systems focuses on scalable backend solutions and cloud-based applications.",
-//     aboutJob:
-//       "As a Backend Developer Intern, you will work with Node.js, Express, and MongoDB.",
-//     Whocanapply:
-//       "Students with experience in backend technologies and databases.",
-//     perks: "Certificate, Networking Opportunities, Paid Internship",
-//     AdditionalInfo: "A strong foundation in databases is required.",
-//     numberOfopning: "3",
-//   },
-//   {
-//     _id: "3",
-//     title: "UI/UX Designer Intern",
-//     company: "Creative Minds",
-//     location: "New York",
-//     stipend: "$600/month",
-//     Duration: "6 Months",
-//     StartDate: "May 10, 2025",
-//     aboutCompany:
-//       "Creative Minds is a design agency focused on user experience and interface design.",
-//     aboutJob:
-//       "As a UI/UX Designer Intern, you will work with Figma, Adobe XD, and design systems.",
-//     Whocanapply:
-//       "Students passionate about designing intuitive user experiences.",
-//     perks: "Mentorship, Hands-on Projects, Letter of Recommendation",
-//     AdditionalInfo: "A portfolio is required for application.",
-//     numberOfopning: "1",
-//   },
-// ];
+import { doc, getDoc, updateDoc, increment } from "firebase/firestore";
+import { db } from "@/firebase/firebase";
+
+export const internships = [
+  {
+    _id: "1",
+    title: "Frontend Developer Intern",
+    company: "Tech Innovators",
+    location: "Remote",
+    stipend: "$500/month",
+    Duration: "3 Months",
+    StartDate: "March 15, 2025",
+    aboutCompany:
+      "Tech Innovators is a leading software development company specializing in modern web applications.",
+    aboutJob:
+      "As a Frontend Developer Intern, you will work on real-world projects using React.js and Tailwind CSS.",
+    Whocanapply:
+      "Students and fresh graduates with knowledge of HTML, CSS, JavaScript, and React.js.",
+    perks: "Certificate, Letter of Recommendation, Flexible Work Hours",
+    AdditionalInfo: "This is a remote internship with flexible working hours.",
+    numberOfopning: "2",
+  },
+  {
+    _id: "2",
+    title: "Backend Developer Intern",
+    company: "Cloud Systems",
+    location: "San Francisco",
+    stipend: "$800/month",
+    Duration: "4 Months",
+    StartDate: "April 1, 2025",
+    aboutCompany:
+      "Cloud Systems focuses on scalable backend solutions and cloud-based applications.",
+    aboutJob:
+      "As a Backend Developer Intern, you will work with Node.js, Express, and MongoDB.",
+    Whocanapply:
+      "Students with experience in backend technologies and databases.",
+    perks: "Certificate, Networking Opportunities, Paid Internship",
+    AdditionalInfo: "A strong foundation in databases is required.",
+    numberOfopning: "3",
+  },
+  {
+    _id: "3",
+    title: "UI/UX Designer Intern",
+    company: "Creative Minds",
+    location: "New York",
+    stipend: "$600/month",
+    Duration: "6 Months",
+    StartDate: "May 10, 2025",
+    aboutCompany:
+      "Creative Minds is a design agency focused on user experience and interface design.",
+    aboutJob:
+      "As a UI/UX Designer Intern, you will work with Figma, Adobe XD, and design systems.",
+    Whocanapply:
+      "Students passionate about designing intuitive user experiences.",
+    perks: "Mentorship, Hands-on Projects, Letter of Recommendation",
+    AdditionalInfo: "A portfolio is required for application.",
+    numberOfopning: "1",
+  },
+];
 
 const index = () => {
   const router = useRouter();
@@ -97,32 +100,74 @@ const index = () => {
       </div>
     );
   }
-  const handlesubmitapplication=async()=>{
-    if(!coverLetter.trim()){
-      toast.error("please write a cover letter")
-      return
+  const handlesubmitapplication = async () => {
+    if (!user) {
+      toast.error("Please login first");
+      return;
     }
-    if(!availability){
-      toast.error("please select your availability")
-      return
+
+    if (!coverLetter.trim()) {
+      toast.error("Please write a cover letter");
+      return;
     }
+
+    if (!availability) {
+      toast.error("Please select your availability");
+      return;
+    }
+
     try {
-      const applicationdata={
-        category:internshipData.category,
-        company:internshipData.company,
-        coverLetter:coverLetter,
-        user:user,
-        Application:id,
-        availability
+      // 🔹 1. Fetch user subscription data
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        toast.error("User profile not found");
+        return;
       }
-      await axios.post("https://internshala-clone-y2p2.onrender.com/api/application",applicationdata)
-      toast.success("Application submit successfully")
-      router.push('/internship')
+
+      const {
+        applyLimit = 1,
+        appliedCount = 0,
+        plan = "free",
+      } = userSnap.data();
+
+      // 🔹 2. Check apply limit
+      if (applyLimit !== Infinity && appliedCount >= applyLimit) {
+        toast.error(
+          `Apply limit reached for ${plan.toUpperCase()} plan. Please upgrade.`
+        );
+        return;
+      }
+
+      // 🔹 3. Submit application
+      const applicationdata = {
+        category: internshipData.category,
+        company: internshipData.company,
+        coverLetter,
+        user,
+        Application: id,
+        availability,
+      };
+
+      await axios.post(
+        "https://internshala-clone-y2p2.onrender.com/api/application",
+        applicationdata
+      );
+
+      // 🔹 4. Increment appliedCount AFTER success
+      await updateDoc(userRef, {
+        appliedCount: increment(1),
+      });
+
+      toast.success("Application submitted successfully");
+      router.push("/internship");
     } catch (error) {
-      console.error(error)
-      toast.error("Failed to submit application")
+      console.error(error);
+      toast.error("Failed to submit application");
     }
-  }
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
